@@ -1,0 +1,44 @@
+{
+  "feature_columns": [
+    "koi_period",
+    "koi_duration",
+    "koi_depth",
+    "koi_prad",
+    "koi_srad",
+    "koi_teq",
+    "koi_steff",
+    "koi_slogg",
+    "koi_smet",
+    "koi_kepmag",
+    "koi_model_snr",
+    "koi_num_transits"
+  ],
+  "train_medians": {
+    "koi_period": 7.7553808,
+    "koi_duration": 3.748,
+    "koi_depth": 447.5,
+    "koi_prad": 2.46,
+    "koi_srad": 0.994,
+    "koi_teq": 933.0,
+    "koi_steff": 5762.0,
+    "koi_slogg": 4.44,
+    "koi_smet": -0.08,
+    "koi_kepmag": 14.595,
+    "koi_model_snr": 27.5,
+    "koi_num_transits": 139.0
+  },
+  "feature_dtypes": {
+    "koi_period": "float64",
+    "koi_duration": "float64",
+    "koi_depth": "float64",
+    "koi_prad": "float64",
+    "koi_srad": "float64",
+    "koi_teq": "float64",
+    "koi_steff": "float64",
+    "koi_slogg": "float64",
+    "koi_smet": "float64",
+    "koi_kepmag": "float64",
+    "koi_model_snr": "float64",
+    "koi_num_transits": "float64"
+  }
+}

@@ -1,0 +1,3 @@
+LINK REPO IN HUGGING FACE: https://huggingface.co/spaces/jarpalucas/eco-finder-api-xgboost/tree/main
+
+WEB API SITE: https://huggingface.co/spaces/jarpalucas/eco-finder-api-xgboost

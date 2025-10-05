@@ -1,0 +1,30 @@
+{
+  "feature_columns": [
+    "koi_period",
+    "koi_duration",
+    "koi_depth",
+    "koi_prad",
+    "koi_srad",
+    "koi_teq",
+    "koi_steff",
+    "koi_slogg",
+    "koi_smet",
+    "koi_kepmag",
+    "koi_model_snr",
+    "koi_num_transits"
+  ],
+  "medians": {
+    "koi_period": 7.7553808,
+    "koi_duration": 3.748,
+    "koi_depth": 447.5,
+    "koi_prad": 2.46,
+    "koi_srad": 0.994,
+    "koi_teq": 933.0,
+    "koi_steff": 5762.0,
+    "koi_slogg": 4.44,
+    "koi_smet": -0.08,
+    "koi_kepmag": 14.595,
+    "koi_model_snr": 27.5,
+    "koi_num_transits": 139.0
+  }
+}
