@@ -87,7 +87,7 @@ curl -s -X POST https://<space>.hf.space/predict-batch   -H "Content-Type: appli
 ### Artifacts required in the Space
 
 - **Keras (default):**  
-  - `modelo_tabular.h5` *(rename to match the filename used in your `app.py`; if your code says `modulo_tabular.h5`, either fix the code or the filename)*  
+  - `modelo_tabular.h5` 
   - `scaler.pkl` (StandardScaler)  
   - `label_encoder.pkl` (LabelEncoder)  
   - `feature_stats.json` (contains `feature_columns` and `medians`)
@@ -196,7 +196,6 @@ python app.py
 ## Data Sources & Acknowledgments
 
 - **NASA Exoplanet Archive** (Kepler/TESS catalogs, KOI, TOI, TCE; official APIs).  
-We gratefully acknowledge the teams and infrastructure behind these datasets and tools.
 
 ---
 
