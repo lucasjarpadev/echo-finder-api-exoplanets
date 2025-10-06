@@ -1,7 +1,7 @@
 # EcoFinder Team — Probabilistic Prioritization of Exoplanet Candidates
 # Authors
 # Matias Graña
-# Manuel Kraft
+# Manuel Krapf
 # Lucas Jarpa
 
 
@@ -15,6 +15,7 @@ It provides a **web UI**, a **public API**, and **reproducible training** notebo
 
 - **Frontend :**  
   https://e58733b4f52c223cfa.gradio.live/
+
 
 - **Backend API (Hugging Face Space):**  
   Classifier using Keras
