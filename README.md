@@ -15,7 +15,7 @@ It provides a **web UI**, a **public API**, and **reproducible training** notebo
 
 - **Frontend :**  
   https://e58733b4f52c223cfa.gradio.live/
-
+  To Test live frontend you need to run the next code in Google Colab frontend-in-gradio file in this folder.
 
 - **Backend API (Hugging Face Space):**  
   Classifier using Keras
