@@ -1,0 +1,189 @@
+# ================================================
+# Exoplanet Finder — Multimodel Gradio UI
+# ================================================
+
+# Instalar dependencias (solo una vez en Colab)
+!pip install --quiet gradio gradio-client pandas
+
+from gradio_client import Client
+import gradio as gr
+import pandas as pd
+import traceback
+import os
+
+# -----------------------
+# SPACES CONFIGURATION
+# -----------------------
+SPACES = {
+    "Keras Model": "jarpalucas/echo-finder-api",
+    "XGBoost Model": "jarpalucas/eco-finder-api-xgboost"
+}
+
+HF_TOKEN = os.environ.get("HF_TOKEN", "")
+
+# Initialize clients
+clients = {}
+for model_name, space_id in SPACES.items():
+    try:
+        clients[model_name] = Client(space_id, hf_token=HF_TOKEN) if HF_TOKEN else Client(space_id)
+    except Exception as e:
+        print(f"[WARN] Could not connect to {space_id}: {e}")
+
+# -----------------------
+# FEATURES and MEDIAN VALUES
+# -----------------------
+FEATURES = [
+    "koi_period","koi_duration","koi_depth","koi_prad","koi_srad",
+    "koi_teq","koi_steff","koi_slogg","koi_smet","koi_kepmag",
+    "koi_model_snr","koi_num_transits"
+]
+
+TRAIN_MEDIANS = {
+    "koi_period": 10.0, "koi_duration": 5.0, "koi_depth": 1000.0,
+    "koi_prad": 2.0, "koi_srad": 1.0, "koi_teq": 1000.0,
+    "koi_steff": 6000.0, "koi_slogg": 4.5, "koi_smet": 0.0,
+    "koi_kepmag": 12.0, "koi_model_snr": 10.0, "koi_num_transits": 3.0
+}
+
+# -----------------------
+# Helper Functions
+# -----------------------
+def first_present(candidates, cols):
+    cols_lower = [c.lower() for c in cols]
+    for cand in candidates:
+        if cand.lower() in cols_lower:
+            return cols[cols_lower.index(cand.lower())]
+    for cand in candidates:
+        for i,c in enumerate(cols_lower):
+            if cand.lower() in c:
+                return cols[i]
+    return None
+
+# -----------------------
+# CSV Cleaning for NASA Exoplanet Archive
+# -----------------------
+def clean_archive_csv(file_path):
+    df_raw = pd.read_csv(file_path, comment='#')
+    df_raw.columns = [c.strip() for c in df_raw.columns]
+    df_out = pd.DataFrame()
+
+    archive_map = {
+        "koi_period": ["pl_orbper", "period"],
+        "koi_duration": ["pl_trandur", "duration"],
+        "koi_depth": ["pl_trandep", "depth"],
+        "koi_prad": ["pl_rade", "prad"],
+        "koi_srad": ["st_rad", "srad"],
+        "koi_teq": ["pl_eqt", "teq"],
+        "koi_steff": ["st_teff", "teff"],
+        "koi_slogg": ["st_logg", "logg"],
+        "koi_smet": ["st_met", "feh", "metallicity"],
+        "koi_kepmag": ["st_mag", "st_optmag", "kepmag"],
+        "koi_model_snr": ["pl_tranflag", "pl_trandeperr", "model_snr"],
+        "koi_num_transits": ["pl_trannum", "ntransits"]
+    }
+
+    for feat in FEATURES:
+        src = first_present(archive_map.get(feat, [feat]), df_raw.columns)
+        if src is not None:
+            df_out[feat] = pd.to_numeric(df_raw[src], errors='coerce').fillna(TRAIN_MEDIANS[feat])
+        else:
+            df_out[feat] = TRAIN_MEDIANS[feat]
+
+    return df_out
+
+# -----------------------
+# Prediction Functions
+# -----------------------
+def predict_manual(model_choice, *args):
+    try:
+        client = clients[model_choice]
+        features = dict(zip(FEATURES, args))
+        result = client.predict(fn_index=0, **features)
+        return {"model": model_choice, "response": result}
+    except Exception as e:
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+def predict_csv(model_choice, file):
+    try:
+        client = clients[model_choice]
+        path = file.name if hasattr(file, "name") else file
+        df = clean_archive_csv(path)
+        results = []
+        for idx, (_, row) in enumerate(df.iterrows()):
+            features = {k: float(row[k]) for k in FEATURES}
+            try:
+                result = client.predict(fn_index=0, **features)
+                results.append({"row": int(idx), "prediction": result})
+            except Exception as e:
+                results.append({"row": int(idx), "error": str(e)})
+        return {"model": model_choice, "results": results}
+    except Exception as e:
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+def health_test(model_choice):
+    sample = TRAIN_MEDIANS.copy()
+    try:
+        client = clients[model_choice]
+        r = client.predict(fn_index=0, **sample)
+        return {"model": model_choice, "ok": True, "response": r}
+    except Exception as e:
+        return {"model": model_choice, "ok": False, "error": str(e), "trace": traceback.format_exc()}
+
+# -----------------------
+# Gradio Interface
+# -----------------------
+with gr.Blocks(title="Exoplanet Finder — Multimodel") as demo:
+    gr.Markdown("# 🌌 Exoplanet Finder — Dual Model (Keras + XGBoost)")
+    gr.Markdown("Select which model to use: neural network (Keras) or decision tree (XGBoost).")
+
+    model_choice = gr.Dropdown(choices=list(SPACES.keys()), value="Keras Model", label="Model")
+
+    with gr.Tab("🎯 Manual Input"):
+        gr.Markdown("Enter the exoplanet and host star parameters below. Values will default to training medians if left unchanged.")
+
+        with gr.Row():
+            with gr.Column():
+                koi_period = gr.Number(label="Orbital Period (days)", value=10.0, info="Time taken by the planet to complete one orbit.")
+                koi_duration = gr.Number(label="Transit Duration (hours)", value=5.0, info="Duration of the planetary transit across the star.")
+                koi_depth = gr.Number(label="Transit Depth (ppm)", value=1000.0, info="Depth of the transit signal in parts per million.")
+                koi_prad = gr.Number(label="Planet Radius (Earth radii)", value=2.0, info="Radius of the planet relative to Earth.")
+            with gr.Column():
+                koi_srad = gr.Number(label="Stellar Radius (Solar radii)", value=1.0, info="Radius of the host star relative to the Sun.")
+                koi_teq = gr.Number(label="Equilibrium Temperature (K)", value=1000.0, info="Estimated temperature of the planet assuming radiative equilibrium.")
+                koi_steff = gr.Number(label="Stellar Effective Temperature (K)", value=6000.0, info="Surface temperature of the host star.")
+                koi_slogg = gr.Number(label="Stellar log(g)", value=4.5, info="Surface gravity of the host star (log cm/s²).")
+            with gr.Column():
+                koi_smet = gr.Number(label="Stellar Metallicity [Fe/H]", value=0.0, info="Metallicity of the host star relative to the Sun.")
+                koi_kepmag = gr.Number(label="Kepler Magnitude", value=12.0, info="Apparent magnitude of the star observed by Kepler.")
+                koi_model_snr = gr.Number(label="Model SNR", value=10.0, info="Signal-to-noise ratio of the transit detection model.")
+                koi_num_transits = gr.Number(label="Number of Transits", value=3.0, info="Number of observed transits in the data.")
+
+        manual_btn = gr.Button("🚀 Predict (Selected Model)")
+        manual_output = gr.JSON()
+        manual_btn.click(
+            predict_manual,
+            inputs=[model_choice,
+                    koi_period, koi_duration, koi_depth, koi_prad,
+                    koi_srad, koi_teq, koi_steff, koi_slogg,
+                    koi_smet, koi_kepmag, koi_model_snr, koi_num_transits],
+            outputs=manual_output
+        )
+
+    with gr.Tab("📁 CSV Input (NASA Archive)"):
+        gr.Markdown("Upload a CSV file from NASA Exoplanet Archive (cumulative table). Column names will be automatically mapped.")
+        csv_file = gr.File(file_types=[".csv"])
+        csv_btn = gr.Button("🚀 Predict CSV (Selected Model)")
+        csv_output = gr.JSON()
+        csv_btn.click(predict_csv, inputs=[model_choice, csv_file], outputs=csv_output)
+
+    with gr.Tab("🔧 Health Test"):
+        gr.Markdown("Test the connection with the selected model.")
+        health_btn = gr.Button("Run Health Test")
+        health_output = gr.JSON()
+        health_btn.click(health_test, inputs=model_choice, outputs=health_output)
+
+# -----------------------
+# Launch Gradio in Colab
+# -----------------------
+if __name__ == "__main__":
+    demo.launch(share=True)
